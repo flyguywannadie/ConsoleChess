@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 
 namespace ChessConsole
@@ -126,8 +127,14 @@ namespace ChessConsole
         /// </summary>
         private bool inCheck;
 
-        public ChessBoard()
+		/// <summary>
+		/// Game mode of the chess board
+		/// </summary>
+		public int GameMode;
+
+		public ChessBoard(int mode)
         {
+            GameMode = mode;
             Reset();
         }
 
@@ -185,15 +192,69 @@ namespace ChessConsole
             EnPassant = null;
             EnPassantCapture = null;
 
-            addPiece(cells[0, 0], new Rook(PlayerColor.White));
-            addPiece(cells[1, 0], new Knight(PlayerColor.White));
-            addPiece(cells[2, 0], new Bishop(PlayerColor.White));
-            addPiece(cells[3, 0], new Queen(PlayerColor.White));
-            addPiece(cells[4, 0], (whiteKing = new King(PlayerColor.White)));
-            addPiece(cells[5, 0], new Bishop(PlayerColor.White));
-            addPiece(cells[6, 0], new Knight(PlayerColor.White));
-            addPiece(cells[7, 0], new Rook(PlayerColor.White));
+            switch (GameMode)
+            {
+                case 2:
+                    SetupPieces960();
+                    break;
+                default:
+                    SetupPiecesDefault();
+                    break;
+            }
 
+            foreach (Piece piece in pieces)
+            {
+                piece.Recalculate();
+            }
+        }
+
+        /// <summary>
+        /// Set up Chess pieces in the default positions
+        /// </summary>
+        private void SetupPiecesDefault()
+        {
+			addPiece(cells[0, 0], new Rook(PlayerColor.White));
+			addPiece(cells[1, 0], new Knight(PlayerColor.White));
+			addPiece(cells[2, 0], new Bishop(PlayerColor.White));
+			addPiece(cells[3, 0], new Queen(PlayerColor.White));
+			addPiece(cells[4, 0], (whiteKing = new King(PlayerColor.White)));
+			addPiece(cells[5, 0], new Bishop(PlayerColor.White));
+			addPiece(cells[6, 0], new Knight(PlayerColor.White));
+			addPiece(cells[7, 0], new Rook(PlayerColor.White));
+
+			addPiece(cells[0, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[1, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[2, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[3, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[4, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[5, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[6, 1], new Pawn(PlayerColor.White));
+			addPiece(cells[7, 1], new Pawn(PlayerColor.White));
+
+			addPiece(cells[0, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[1, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[2, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[3, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[4, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[5, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[6, 6], new Pawn(PlayerColor.Black));
+			addPiece(cells[7, 6], new Pawn(PlayerColor.Black));
+
+			addPiece(cells[0, 7], new Rook(PlayerColor.Black));
+			addPiece(cells[1, 7], new Knight(PlayerColor.Black));
+			addPiece(cells[2, 7], new Bishop(PlayerColor.Black));
+			addPiece(cells[3, 7], new Queen(PlayerColor.Black));
+			addPiece(cells[4, 7], (blackKing = new King(PlayerColor.Black)));
+			addPiece(cells[5, 7], new Bishop(PlayerColor.Black));
+			addPiece(cells[6, 7], new Knight(PlayerColor.Black));
+			addPiece(cells[7, 7], new Rook(PlayerColor.Black));
+		}
+
+		/// <summary>
+		/// Set up Chess pieces for the Chess960 game mode
+		/// </summary>
+		private void SetupPieces960()
+		{
             addPiece(cells[0, 1], new Pawn(PlayerColor.White));
             addPiece(cells[1, 1], new Pawn(PlayerColor.White));
             addPiece(cells[2, 1], new Pawn(PlayerColor.White));
@@ -212,27 +273,74 @@ namespace ChessConsole
             addPiece(cells[6, 6], new Pawn(PlayerColor.Black));
             addPiece(cells[7, 6], new Pawn(PlayerColor.Black));
 
-            addPiece(cells[0, 7], new Rook(PlayerColor.Black));
-            addPiece(cells[1, 7], new Knight(PlayerColor.Black));
-            addPiece(cells[2, 7], new Bishop(PlayerColor.Black));
-            addPiece(cells[3, 7], new Queen(PlayerColor.Black));
-            addPiece(cells[4, 7], (blackKing = new King(PlayerColor.Black)));
-            addPiece(cells[5, 7], new Bishop(PlayerColor.Black));
-            addPiece(cells[6, 7], new Knight(PlayerColor.Black));
-            addPiece(cells[7, 7], new Rook(PlayerColor.Black));
+            Random rand = new Random();
+            List<int> availableSpaces = new List<int>() { 0, 1, 2, 3, 4, 5, 6, 7 };
 
-            foreach (Piece piece in pieces)
+            int kingPos = availableSpaces[rand.Next(1, availableSpaces.Count - 1)];
+            int rookPos1 = availableSpaces[rand.Next(0, kingPos)];
+            int rookPos2 = availableSpaces[rand.Next(kingPos + 1, availableSpaces.Count)];
+            availableSpaces.Remove(kingPos);
+            availableSpaces.Remove(rookPos1);
+            availableSpaces.Remove(rookPos2);
+            int bishopPos1 = availableSpaces[rand.Next(0, availableSpaces.Count)];
+            availableSpaces.Remove(bishopPos1);
+            int bishopPos2 = 0;
+            do
             {
-                piece.Recalculate();
-            }
+                bishopPos2 = availableSpaces[rand.Next(0, availableSpaces.Count)];
+            } while (bishopPos2 % 2 == bishopPos1 % 2);
+            availableSpaces.Remove(bishopPos2);
+            int knightPos1 = availableSpaces[rand.Next(0, availableSpaces.Count)];
+            availableSpaces.Remove(knightPos1);
+            int knightPos2 = availableSpaces[rand.Next(0, availableSpaces.Count)];
+			availableSpaces.Remove(knightPos2);
+            int queenPos = availableSpaces[rand.Next(0, availableSpaces.Count)];
+			availableSpaces.Remove(queenPos);
+
+
+			addPiece(cells[rookPos1, 0], new Rook(PlayerColor.White));
+			addPiece(cells[knightPos1, 0], new Knight(PlayerColor.White));
+			addPiece(cells[bishopPos1, 0], new Bishop(PlayerColor.White));
+			addPiece(cells[queenPos, 0], new Queen(PlayerColor.White));
+			addPiece(cells[kingPos, 0], (whiteKing = new King(PlayerColor.White)));
+			addPiece(cells[bishopPos2, 0], new Bishop(PlayerColor.White));
+			addPiece(cells[knightPos2, 0], new Knight(PlayerColor.White));
+			addPiece(cells[rookPos2, 0], new Rook(PlayerColor.White));
+
+			addPiece(cells[rookPos1, 7], new Rook(PlayerColor.Black));
+			addPiece(cells[knightPos1, 7], new Knight(PlayerColor.Black));
+			addPiece(cells[bishopPos1, 7], new Bishop(PlayerColor.Black));
+			addPiece(cells[queenPos, 7], new Queen(PlayerColor.Black));
+			addPiece(cells[kingPos, 7], (blackKing = new King(PlayerColor.Black)));
+			addPiece(cells[bishopPos2, 7], new Bishop(PlayerColor.Black));
+			addPiece(cells[knightPos2, 7], new Knight(PlayerColor.Black));
+			addPiece(cells[rookPos2, 7], new Rook(PlayerColor.Black));
+		}
+
+        /// <summary>
+        /// Getter for all existing pieces on the board
+        /// </summary>
+        /// <returns>List of pieces on the board</returns>
+        public List<Piece> getPieces() {
+            return pieces;
         }
 
         /// <summary>
-        /// Called at the start of every turn. Recalcualtes legal moves.
+        /// Getter for the king piece
         /// </summary>
-        /// <param name="currentPlayer">The player whose turn is to move</param>
-        /// <returns>Whether the player had any moves</returns>
-        public bool TurnStart(PlayerColor currentPlayer)
+        /// <param name="color">Color of the gotten king</param>
+        /// <returns>The King piece</returns>
+        public Piece GetKing(PlayerColor color)
+        {
+            return color == PlayerColor.White ? whiteKing : blackKing;
+		}
+
+		/// <summary>
+		/// Called at the start of every turn. Recalcualtes legal moves.
+		/// </summary>
+		/// <param name="currentPlayer">The player whose turn is to move</param>
+		/// <returns>Whether the player had any moves</returns>
+		public bool TurnStart(PlayerColor currentPlayer)
         {
             inCheck = IsInCheck(currentPlayer, false);
             bool anyLegalMove = false;

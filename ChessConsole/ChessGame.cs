@@ -61,10 +61,10 @@ namespace ChessConsole
         /// </summary>
         private ChessBoard.Cell moveTo = null;
 
-        public ChessGame()
+        public ChessGame(int mode)
         {
             Running = true;
-            board = new ChessBoard();
+            board = new ChessBoard(mode);
             currentPlayer = PlayerColor.White;
             turnStart();
         }
